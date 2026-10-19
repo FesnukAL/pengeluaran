@@ -2,6 +2,7 @@ FROM php:8.3-apache
 
 # Install system dependencies & PHP extensions
 RUN apt-get update && apt-get install -y \
+    ca-certificates \
     git \
     curl \
     libpng-dev \
