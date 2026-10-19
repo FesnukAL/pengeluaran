@@ -118,13 +118,19 @@ class TelegramService
      */
     public static function kirimPengingatHarian($force = false)
     {
-        // Hindari spam: hanya kirim sekali dalam 4 jam kecuali force = true
-        $cacheKey = 'telegram_pengingat_terakhir';
-        if (!$force && Cache::has($cacheKey)) {
-            return false;
-        }
-
         $now = Carbon::now('Asia/Jakarta');
+        $cacheKey = 'telegram_pengingat_tanggal_' . $now->toDateString();
+
+        if (!$force) {
+            // Jika pengingat hari ini sudah pernah terkirim, jangan kirim lagi
+            if (Cache::has($cacheKey)) {
+                return false;
+            }
+            // Hanya kirim jika waktu sudah memasuki pukul 07:00 pagi atau setelahnya
+            if ($now->hour < 7) {
+                return false;
+            }
+        }
         $hariIndo = [
             'Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa',
             'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'
@@ -245,8 +251,8 @@ class TelegramService
         $hasil = self::kirimPesan($pesan);
 
         if ($hasil) {
-            // Set cooldown 4 jam
-            Cache::put($cacheKey, now(), now()->addHours(4));
+            // Tandai sudah terkirim hari ini (disimpan hingga akhir hari pukul 23:59 WIB)
+            Cache::put($cacheKey, true, $now->copy()->endOfDay());
         }
 
         return $hasil;
