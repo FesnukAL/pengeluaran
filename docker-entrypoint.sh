@@ -6,11 +6,6 @@ PORT=${PORT:-80}
 sed -i "s/Listen 80/Listen $PORT/g" /etc/apache2/ports.conf
 sed -i "s/:80>/:$PORT>/g" /etc/apache2/sites-available/000-default.conf
 
-# Cegah konflik modul MPM di Apache
-a2dismod mpm_event || true
-a2dismod mpm_worker || true
-a2enmod mpm_prefork || true
-
 # Buat symbolic link storage jika belum ada
 php artisan storage:link || true
 
@@ -24,4 +19,6 @@ if [ -n "$APP_KEY" ]; then
     php artisan view:cache || true
 fi
 
-exec apache2-foreground
+# Pastikan environment variable Apache dimuat
+. /etc/apache2/envvars
+exec /usr/sbin/apache2 -DFOREGROUND
