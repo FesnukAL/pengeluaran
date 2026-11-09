@@ -2,7 +2,7 @@
 set -e
 
 # Default PORT 80 jika variabel $PORT dari Railway belum di-set
-export PORT=${PORT:-80}
+PORT=${PORT:-80}
 
 # Buat symbolic link storage jika belum ada
 php artisan storage:link || true
@@ -17,5 +17,5 @@ if [ -n "$APP_KEY" ]; then
     php artisan view:cache || true
 fi
 
-# Jalankan script Apache resmi bawaan image Docker PHP
-exec apache2-foreground
+echo "🚀 Menjalankan Catatan Keuangan di Port $PORT..."
+exec php artisan serve --host=0.0.0.0 --port=$PORT
