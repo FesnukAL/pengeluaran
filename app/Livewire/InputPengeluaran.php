@@ -5,16 +5,17 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\Pengeluaran;
 use App\Models\Dompet;
-use App\Models\Kategori; // Pastikan model Kategori di-import
+use App\Models\Kategori;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class InputPengeluaran extends Component
 {
     public $tanggal;
-    public $dompet_id; // TAMBAHAN: Properti untuk menampung pilihan dompet
+    public $dompet_id;
     public $pengeluaran = [];
     public $total_nominal = 0;
-
-    // Tambahkan variabel ini untuk menyimpan pesan error
     public $pesan_error = null;
 
     public function mount()
@@ -41,21 +42,16 @@ class InputPengeluaran extends Component
 
     public function updated($property, $value)
     {
-        // Reset pesan error setiap kali kamu ngetik
         $this->pesan_error = null;
 
         if (str_starts_with($property, 'pengeluaran.') && str_ends_with($property, '.nominal')) {
             $index = explode('.', $property)[1];
 
             if ($value !== '') {
-                // Ambil nilai mentahnya dulu sebelum dibersihkan
                 $nilai_mentah = (int) $value;
                 $nominal_bersih = abs($nilai_mentah);
 
-                // Cek apakah nilainya minus, nol, atau lebih dari 1 miliar
                 if ($nilai_mentah <= 0 || $nominal_bersih > 1000000000) {
-
-                    // Memicu pesan ledekan!
                     $this->pesan_error = "Wle gabisa input mines dan 1miliar wle😝";
 
                     if ($nilai_mentah <= 0) {
@@ -82,51 +78,62 @@ class InputPengeluaran extends Component
 
     public function simpan()
     {
-        // 1. Validasi untuk memastikan tidak ada kolom yang terlewat
+        $userId = Auth::id();
+
+        // 1. Validasi kepemilikan dompet dan kategori milik user aktif
         $this->validate([
-            'dompet_id' => 'required', // TAMBAHAN: Validasi wajib pilih dompet
+            'dompet_id' => [
+                'required',
+                Rule::exists('dompets', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
             'tanggal' => 'required|date',
-            'pengeluaran.*.kategori_id' => 'required',
+            'pengeluaran.*.kategori_id' => [
+                'required',
+                Rule::exists('kategoris', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
             'pengeluaran.*.nominal' => 'required|numeric|min:1',
         ], [
-            'dompet_id.required' => 'Pilih sumber dana/dompet dulu wle😝!', // TAMBAHAN: Pesan error
+            'dompet_id.required' => 'Pilih sumber dana/dompet dulu wle😝!',
+            'dompet_id.exists' => 'Dompet yang dipilih tidak valid!',
             'pengeluaran.*.kategori_id.required' => 'Pilih kategori dulu, ya!',
+            'pengeluaran.*.kategori_id.exists' => 'Kategori yang dipilih tidak valid!',
             'pengeluaran.*.nominal.required' => 'Nominal tidak boleh kosong!'
         ]);
 
-        // 2. Looping data array dan simpan ke database satu per satu
-        foreach ($this->pengeluaran as $item) {
-            Pengeluaran::create([
-                'dompet_id' => $this->dompet_id, // TAMBAHAN: Simpan ID dompet ke tabel pengeluaran
-                'tanggal' => $this->tanggal,
-                'kategori_id' => $item['kategori_id'],
-                'nominal' => $item['nominal'],
-                'keterangan' => $item['keterangan']
-            ]);
-        }
+        // 2. Transaksi Database dengan Lock agar saldo konsisten
+        DB::transaction(function () use ($userId) {
+            $dompet = Dompet::where('user_id', $userId)->lockForUpdate()->find($this->dompet_id);
+            if ($dompet) {
+                foreach ($this->pengeluaran as $item) {
+                    Pengeluaran::create([
+                        'user_id' => $userId,
+                        'dompet_id' => $this->dompet_id,
+                        'tanggal' => $this->tanggal,
+                        'kategori_id' => $item['kategori_id'],
+                        'nominal' => $item['nominal'],
+                        'keterangan' => $item['keterangan'] ?? null,
+                    ]);
+                }
 
-        // 3. TAMBAHAN: Potong saldo dompet berdasarkan TOTAL NOMINAL semua baris
-        $dompet = Dompet::find($this->dompet_id);
-        if ($dompet) {
-            $dompet->decrement('saldo', $this->total_nominal);
-        }
+                $dompet->decrement('saldo', $this->total_nominal);
+            }
+        });
 
-        // 4. Reset form kembali menjadi 1 baris kosong setelah berhasil simpan
+        // 3. Reset form
         $this->pengeluaran = [];
         $this->tambahBaris();
         $this->hitungTotal();
-        $this->reset('dompet_id'); // TAMBAHAN: Reset pilihan dompet ke kosong
+        $this->reset('dompet_id');
 
-        // 5. Munculkan pesan sukses
         session()->flash('sukses', 'Mantap! Pengeluaran berhasil dicatat dan saldo dompet otomatis terpotong.');
     }
 
     public function render()
     {
-        // TAMBAHAN: Kirim variabel daftarDompet agar bisa dipakai di form select (Blade)
+        $userId = Auth::id();
         return view('livewire.input-pengeluaran', [
-            'daftarDompet' => Dompet::all(),
-            'daftarKategori' => Kategori::all() // Pastikan model Kategori di-import
+            'daftarDompet' => Dompet::where('user_id', $userId)->get(),
+            'daftarKategori' => Kategori::where('user_id', $userId)->get()
         ]);
     }
 }

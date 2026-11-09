@@ -13,12 +13,12 @@ class TelegramService
 {
     protected static function getBotToken()
     {
-        return env('TELEGRAM_BOT_TOKEN');
+        return config('services.telegram.bot_token') ?: env('TELEGRAM_BOT_TOKEN');
     }
 
     protected static function getChatId()
     {
-        return env('TELEGRAM_CHAT_ID');
+        return config('services.telegram.chat_id') ?: env('TELEGRAM_CHAT_ID');
     }
 
     /**

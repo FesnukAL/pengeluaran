@@ -16,10 +16,10 @@
                     <div class="col-md-3 mb-3">
                         <label class="fw-bold">Kategori</label>
                         <select class="form-select" wire:model="edit_kategori_id">
-                            <option value="1">Bensin Vario / Transportasi</option>
-                            <option value="2">Konsumsi (Makan & Minum)</option>
-                            <option value="3">Keperluan Kampus / UPT Komputer</option>
-                            <option value="4">Kebutuhan Rumah / Adik</option>
+                            <option value="">-- Pilih Kategori --</option>
+                            @foreach($kategoris as $kategori)
+                                <option value="{{ $kategori->id }}">{{ $kategori->nama_kategori }}</option>
+                            @endforeach
                         </select>
                     </div>
                     @endif

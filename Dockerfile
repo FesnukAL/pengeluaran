@@ -25,6 +25,9 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . .
 
+# Pastikan script entrypoint memakai line-ending Linux (LF)
+RUN sed -i -e 's/\r$//' /var/www/html/docker-entrypoint.sh
+
 # Set Apache document root to Laravel /public directory
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
@@ -41,4 +44,3 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 EXPOSE 80
 
 ENTRYPOINT ["/var/www/html/docker-entrypoint.sh"]
-

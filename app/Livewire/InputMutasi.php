@@ -5,7 +5,9 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\Dompet;
 use App\Models\Mutasi;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class InputMutasi extends Component
 {
@@ -15,30 +17,48 @@ class InputMutasi extends Component
     public $nominal;
     public $keterangan;
 
-    // Method mount dipanggil pertama kali saat halaman di-load
     public function mount()
     {
-        $this->tanggal = date('Y-m-d'); // Set default tanggal hari ini
+        $this->tanggal = date('Y-m-d');
     }
 
     public function simpanMutasi()
     {
+        $userId = Auth::id();
+
         // 1. Validasi Input
         $this->validate([
             'tanggal'          => 'required|date',
-            'dompet_asal_id'   => 'required|exists:dompets,id|different:dompet_tujuan_id',
-            'dompet_tujuan_id' => 'required|exists:dompets,id',
+            'dompet_asal_id'   => [
+                'required',
+                'different:dompet_tujuan_id',
+                Rule::exists('dompets', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
+            'dompet_tujuan_id' => [
+                'required',
+                Rule::exists('dompets', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
             'nominal'          => 'required|integer|min:1',
             'keterangan'       => 'nullable|string|max:255',
         ], [
             'dompet_asal_id.different' => 'Dompet Asal dan Dompet Tujuan tidak boleh sama!',
+            'dompet_asal_id.exists'    => 'Dompet asal tidak valid!',
+            'dompet_tujuan_id.exists'  => 'Dompet tujuan tidak valid!',
         ]);
 
         try {
-            // 2. Transaksi Database
-            DB::transaction(function () {
+            // 2. Transaksi Database dengan Lock
+            DB::transaction(function () use ($userId) {
+                $dompetAsal = Dompet::where('user_id', $userId)->lockForUpdate()->findOrFail($this->dompet_asal_id);
+                $dompetTujuan = Dompet::where('user_id', $userId)->lockForUpdate()->findOrFail($this->dompet_tujuan_id);
+
+                if ($dompetAsal->saldo < $this->nominal) {
+                    throw new \Exception('Saldo dompet asal tidak mencukupi untuk melakukan transfer!');
+                }
+
                 // Catat di tabel mutasis
                 Mutasi::create([
+                    'user_id'          => $userId,
                     'tanggal'          => $this->tanggal,
                     'dompet_asal_id'   => $this->dompet_asal_id,
                     'dompet_tujuan_id' => $this->dompet_tujuan_id,
@@ -46,28 +66,23 @@ class InputMutasi extends Component
                     'keterangan'       => $this->keterangan,
                 ]);
 
-                // Kurangi saldo asal
-                $dompetAsal = Dompet::lockForUpdate()->findOrFail($this->dompet_asal_id);
+                // Kurangi saldo asal & tambah saldo tujuan
                 $dompetAsal->decrement('saldo', $this->nominal);
-
-                // Tambah saldo tujuan
-                $dompetTujuan = Dompet::lockForUpdate()->findOrFail($this->dompet_tujuan_id);
                 $dompetTujuan->increment('saldo', $this->nominal);
             });
 
-            // 3. Beri notifikasi sukses dan reset form
             session()->flash('success', 'Transfer antar dompet berhasil dicatat!');
             $this->reset(['dompet_asal_id', 'dompet_tujuan_id', 'nominal', 'keterangan']);
         } catch (\Exception $e) {
-            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            session()->flash('error', $e->getMessage());
         }
     }
 
     public function render()
     {
-        // Kirim data dompet ke view untuk dropdown
+        $userId = Auth::id();
         return view('livewire.input-mutasi', [
-            'dompets' => Dompet::all()
+            'dompets' => Dompet::where('user_id', $userId)->get()
         ]);
     }
 }

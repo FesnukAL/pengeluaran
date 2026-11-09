@@ -7,10 +7,11 @@ use App\Models\Tugas;
 use App\Models\Matkul;
 use App\Services\TelegramService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class ManajemenTugas extends Component
 {
-    public $tipe = 'kuliah'; // 'kuliah' atau 'daily'
+    public $tipe = 'kuliah';
     public $matkul_id;
     public $judul_tugas;
     public $deskripsi;
@@ -22,8 +23,8 @@ class ManajemenTugas extends Component
     public $is_edit = false;
 
     // Filter
-    public $filter_status = 'belum'; // default tampilkan yang belum selesai
-    public $filter_tipe = ''; // '' = semua, 'kuliah', 'daily'
+    public $filter_status = 'belum';
+    public $filter_tipe = '';
     public $filter_matkul = '';
 
     public function mount()
@@ -57,10 +58,12 @@ class ManajemenTugas extends Component
 
     public function simpan()
     {
+        $userId = Auth::id();
+
         if ($this->tipe === 'daily') {
             $this->validate([
                 'judul_tugas' => 'required|min:2',
-                'prioritas' => 'required|in:Tinggi,Sedang,Rendah',
+                'prioritas'   => 'required|in:Tinggi,Sedang,Rendah',
             ], [
                 'judul_tugas.required' => 'Nama kegiatan / daily task wajib diisi!',
             ]);
@@ -68,25 +71,26 @@ class ManajemenTugas extends Component
             $deadlineValue = Carbon::today()->setTime(23, 59, 59);
 
             if ($this->is_edit && $this->edit_id) {
-                $tugas = Tugas::findOrFail($this->edit_id);
+                $tugas = Tugas::where('user_id', $userId)->findOrFail($this->edit_id);
                 $tugas->update([
-                    'tipe' => 'daily',
-                    'matkul_id' => null,
+                    'tipe'        => 'daily',
+                    'matkul_id'   => null,
                     'judul_tugas' => $this->judul_tugas,
-                    'deskripsi' => $this->deskripsi,
-                    'prioritas' => $this->prioritas,
-                    'status' => $this->status,
+                    'deskripsi'   => $this->deskripsi,
+                    'prioritas'   => $this->prioritas,
+                    'status'      => $this->status,
                 ]);
                 session()->flash('sukses', 'Daily task berhasil diperbarui!');
             } else {
                 $tugas = Tugas::create([
-                    'tipe' => 'daily',
-                    'matkul_id' => null,
+                    'user_id'     => $userId,
+                    'tipe'        => 'daily',
+                    'matkul_id'   => null,
                     'judul_tugas' => $this->judul_tugas,
-                    'deskripsi' => $this->deskripsi,
-                    'deadline' => $deadlineValue,
-                    'prioritas' => $this->prioritas,
-                    'status' => 'belum',
+                    'deskripsi'   => $this->deskripsi,
+                    'deadline'    => $deadlineValue,
+                    'prioritas'   => $this->prioritas,
+                    'status'      => 'belum',
                 ]);
                 TelegramService::notifikasiTugasDitambahkan($tugas);
                 session()->flash('sukses', 'Daily task berhasil ditambahkan & notifikasi terkirim ke Telegram!');
@@ -94,34 +98,35 @@ class ManajemenTugas extends Component
         } else {
             $this->validate([
                 'judul_tugas' => 'required|min:3',
-                'deadline' => 'required',
-                'prioritas' => 'required|in:Tinggi,Sedang,Rendah',
+                'deadline'    => 'required',
+                'prioritas'   => 'required|in:Tinggi,Sedang,Rendah',
             ], [
                 'judul_tugas.required' => 'Judul tugas kuliah wajib diisi!',
-                'deadline.required' => 'Tanggal & waktu deadline wajib ditentukan!',
+                'deadline.required'    => 'Tanggal & waktu deadline wajib ditentukan!',
             ]);
 
             if ($this->is_edit && $this->edit_id) {
-                $tugas = Tugas::findOrFail($this->edit_id);
+                $tugas = Tugas::where('user_id', $userId)->findOrFail($this->edit_id);
                 $tugas->update([
-                    'tipe' => 'kuliah',
-                    'matkul_id' => $this->matkul_id ?: null,
+                    'tipe'        => 'kuliah',
+                    'matkul_id'   => $this->matkul_id ?: null,
                     'judul_tugas' => $this->judul_tugas,
-                    'deskripsi' => $this->deskripsi,
-                    'deadline' => $this->deadline,
-                    'prioritas' => $this->prioritas,
-                    'status' => $this->status,
+                    'deskripsi'   => $this->deskripsi,
+                    'deadline'    => $this->deadline,
+                    'prioritas'   => $this->prioritas,
+                    'status'      => $this->status,
                 ]);
                 session()->flash('sukses', 'Tugas kuliah berhasil diperbarui!');
             } else {
                 $tugas = Tugas::create([
-                    'tipe' => 'kuliah',
-                    'matkul_id' => $this->matkul_id ?: null,
+                    'user_id'     => $userId,
+                    'tipe'        => 'kuliah',
+                    'matkul_id'   => $this->matkul_id ?: null,
                     'judul_tugas' => $this->judul_tugas,
-                    'deskripsi' => $this->deskripsi,
-                    'deadline' => $this->deadline,
-                    'prioritas' => $this->prioritas,
-                    'status' => $this->status,
+                    'deskripsi'   => $this->deskripsi,
+                    'deadline'    => $this->deadline,
+                    'prioritas'   => $this->prioritas,
+                    'status'      => $this->status,
                 ]);
                 TelegramService::notifikasiTugasDitambahkan($tugas);
                 session()->flash('sukses', 'Tugas baru berhasil ditambahkan & notifikasi terkirim ke Telegram!');
@@ -133,7 +138,7 @@ class ManajemenTugas extends Component
 
     public function edit($id)
     {
-        $tugas = Tugas::findOrFail($id);
+        $tugas = Tugas::where('user_id', Auth::id())->findOrFail($id);
         $this->edit_id = $tugas->id;
         $this->tipe = $tugas->tipe ?? 'kuliah';
         $this->matkul_id = $tugas->matkul_id;
@@ -147,7 +152,7 @@ class ManajemenTugas extends Component
 
     public function toggleStatus($id)
     {
-        $tugas = Tugas::with('matkul')->findOrFail($id);
+        $tugas = Tugas::with('matkul')->where('user_id', Auth::id())->findOrFail($id);
         $tugas->status = ($tugas->status === 'selesai') ? 'belum' : 'selesai';
         $tugas->save();
 
@@ -159,7 +164,11 @@ class ManajemenTugas extends Component
 
     public function setStatus($id, $newStatus)
     {
-        $tugas = Tugas::with('matkul')->findOrFail($id);
+        if (!in_array($newStatus, ['belum', 'proses', 'selesai'])) {
+            return;
+        }
+
+        $tugas = Tugas::with('matkul')->where('user_id', Auth::id())->findOrFail($id);
         $tugas->status = $newStatus;
         $tugas->save();
 
@@ -191,7 +200,7 @@ class ManajemenTugas extends Component
 
     public function hapus($id)
     {
-        $tugas = Tugas::findOrFail($id);
+        $tugas = Tugas::where('user_id', Auth::id())->findOrFail($id);
         $tugas->delete();
         session()->flash('sukses', 'Tugas berhasil dihapus!');
         if ($this->edit_id === $id) {
@@ -201,7 +210,9 @@ class ManajemenTugas extends Component
 
     public function render()
     {
-        $query = Tugas::with('matkul');
+        $userId = Auth::id();
+
+        $query = Tugas::where('user_id', $userId)->with('matkul');
 
         if ($this->filter_status === 'belum') {
             $query->where('status', '!=', 'selesai');
@@ -219,18 +230,19 @@ class ManajemenTugas extends Component
 
         $tugasList = $query->orderBy('deadline', 'asc')->get();
 
-        $total_tugas = Tugas::count();
-        $total_kuliah = Tugas::where('tipe', 'kuliah')->count();
-        $total_daily = Tugas::where('tipe', 'daily')->count();
-        $total_belum = Tugas::where('status', '!=', 'selesai')->count();
-        $total_selesai = Tugas::where('status', 'selesai')->count();
-        $total_deadline_hari_ini = Tugas::where('status', '!=', 'selesai')
+        $total_tugas = Tugas::where('user_id', $userId)->count();
+        $total_kuliah = Tugas::where('user_id', $userId)->where('tipe', 'kuliah')->count();
+        $total_daily = Tugas::where('user_id', $userId)->where('tipe', 'daily')->count();
+        $total_belum = Tugas::where('user_id', $userId)->where('status', '!=', 'selesai')->count();
+        $total_selesai = Tugas::where('user_id', $userId)->where('status', 'selesai')->count();
+        $total_deadline_hari_ini = Tugas::where('user_id', $userId)
+            ->where('status', '!=', 'selesai')
             ->whereDate('deadline', Carbon::today())
             ->count();
 
         return view('livewire.manajemen-tugas', [
             'tugasList' => $tugasList,
-            'daftarMatkul' => Matkul::orderBy('nama_matkul')->get(),
+            'daftarMatkul' => Matkul::where('user_id', $userId)->orderBy('nama_matkul')->get(),
             'total_tugas' => $total_tugas,
             'total_kuliah' => $total_kuliah,
             'total_daily' => $total_daily,

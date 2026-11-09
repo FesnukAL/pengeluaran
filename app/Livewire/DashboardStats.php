@@ -7,6 +7,7 @@ use App\Models\Pengeluaran;
 use App\Models\Pemasukan;
 use App\Models\Dompet;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardStats extends Component
 {
@@ -15,42 +16,44 @@ class DashboardStats extends Component
 
     public function mount()
     {
-        // Set default ke bulan dan tahun saat ini
         $this->bulan = Carbon::now()->format('m');
         $this->tahun = Carbon::now()->format('Y');
     }
 
     public function render()
     {
+        $userId = Auth::id();
         $hari_ini = Carbon::today();
 
-        // 1. Hitung pengeluaran khusus hari ini
-        $pengeluaran_hari_ini = Pengeluaran::whereDate('tanggal', $hari_ini)->sum('nominal');
+        // 1. Hitung pengeluaran khusus hari ini milik user aktif
+        $pengeluaran_hari_ini = Pengeluaran::where('user_id', $userId)
+            ->whereDate('tanggal', $hari_ini)
+            ->sum('nominal');
 
-        // 2. Hitung total bulanan keseluruhan (Gabungan semua dompet)
-        $total_pengeluaran = Pengeluaran::whereMonth('tanggal', $this->bulan)
+        // 2. Hitung total bulanan keseluruhan milik user aktif
+        $total_pengeluaran = Pengeluaran::where('user_id', $userId)
+            ->whereMonth('tanggal', $this->bulan)
             ->whereYear('tanggal', $this->tahun)
             ->sum('nominal');
 
-        $total_pemasukan = Pemasukan::whereMonth('tanggal', $this->bulan)
+        $total_pemasukan = Pemasukan::where('user_id', $userId)
+            ->whereMonth('tanggal', $this->bulan)
             ->whereYear('tanggal', $this->tahun)
             ->sum('nominal');
 
-        // Total Sisa Saldo Gabungan
-        $sisa_saldo = Dompet::sum('saldo');
+        // Total Sisa Saldo Gabungan dompet user aktif
+        $sisa_saldo = Dompet::where('user_id', $userId)->sum('saldo');
 
-        // 3. REVISI UTAMA: Hitung Breakdown Pemasukan & Pengeluaran PER DOMPET
-        // Kita ambil semua dompet, lalu inject total pemasukan & pengeluaran bulanan masing-masing
-        $breakdown_dompet = Dompet::get()->map(function ($dompet) {
-
-            // Hitung pemasukan bulan ini khusus dompet ini
-            $dompet->pemasukan_bulan_ini = Pemasukan::where('dompet_id', $dompet->id)
+        // 3. Breakdown Pemasukan & Pengeluaran PER DOMPET milik user aktif
+        $breakdown_dompet = Dompet::where('user_id', $userId)->get()->map(function ($dompet) use ($userId) {
+            $dompet->pemasukan_bulan_ini = Pemasukan::where('user_id', $userId)
+                ->where('dompet_id', $dompet->id)
                 ->whereMonth('tanggal', $this->bulan)
                 ->whereYear('tanggal', $this->tahun)
                 ->sum('nominal');
 
-            // Hitung pengeluaran bulan ini khusus dompet ini
-            $dompet->pengeluaran_bulan_ini = Pengeluaran::where('dompet_id', $dompet->id)
+            $dompet->pengeluaran_bulan_ini = Pengeluaran::where('user_id', $userId)
+                ->where('dompet_id', $dompet->id)
                 ->whereMonth('tanggal', $this->bulan)
                 ->whereYear('tanggal', $this->tahun)
                 ->sum('nominal');
@@ -58,26 +61,26 @@ class DashboardStats extends Component
             return $dompet;
         });
 
-        // 4. REVISI RIWAYAT: Ambil daftar transaksi dengan relasi dompet agar muncul di tabel
-        $pengeluaran_list = Pengeluaran::with(['kategori', 'dompet']) // Tambah eager load 'dompet'
+        // 4. Riwayat transaksi terbaru milik user aktif
+        $pengeluaran_list = Pengeluaran::with(['kategori', 'dompet'])
+            ->where('user_id', $userId)
             ->whereMonth('tanggal', $this->bulan)
             ->whereYear('tanggal', $this->tahun)
             ->get()
             ->map(function ($item) {
                 $item->tipe = 'pengeluaran';
-                // Menampilkan Kategori + Nama Dompet, contoh: "Transportasi (Uang Tunai)"
                 $nama_dompet = $item->dompet->nama ?? 'Tanpa Dompet';
                 $item->nama_tipe = ($item->kategori->nama_kategori ?? 'Tanpa Kategori') . " ($nama_dompet)";
                 return $item;
             });
 
-        $pemasukan_list = Pemasukan::with('dompet') // Tambah eager load 'dompet'
+        $pemasukan_list = Pemasukan::with('dompet')
+            ->where('user_id', $userId)
             ->whereMonth('tanggal', $this->bulan)
             ->whereYear('tanggal', $this->tahun)
             ->get()
             ->map(function ($item) {
                 $item->tipe = 'pemasukan';
-                // Menampilkan Nama Dompet pada pemasukan, contoh: "Pemasukan (Bank BRI)"
                 $nama_dompet = $item->dompet->nama ?? 'Tanpa Dompet';
                 $item->nama_tipe = "Pemasukan ($nama_dompet)";
                 return $item;
@@ -90,7 +93,7 @@ class DashboardStats extends Component
             'total_pengeluaran'    => $total_pengeluaran,
             'total_pemasukan'      => $total_pemasukan,
             'sisa_saldo'           => $sisa_saldo,
-            'breakdown_dompet'     => $breakdown_dompet, // VARIABEL BARU
+            'breakdown_dompet'     => $breakdown_dompet,
             'transaksi'            => $transaksi
         ]);
     }

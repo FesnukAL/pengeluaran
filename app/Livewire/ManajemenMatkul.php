@@ -4,13 +4,14 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use App\Models\Matkul;
+use Illuminate\Support\Facades\Auth;
 
 class ManajemenMatkul extends Component
 {
     public $tipe = 'kuliah'; // 'kuliah' atau 'jaga_lab'
-    public $nama_matkul; // Nama Matkul atau Nama Lab / Sesi Jaga
+    public $nama_matkul;
     public $kode_matkul;
-    public $dosen; // Dosen Pengampu atau Koordinator Lab / Rekan Jaga
+    public $dosen;
     public $sks = 2;
     public $hari = 'Senin';
     public $jam_mulai;
@@ -22,13 +23,12 @@ class ManajemenMatkul extends Component
     public $edit_id = null;
     public $is_edit = false;
     public $filter_hari = '';
-    public $filter_tipe = ''; // '', 'kuliah', 'jaga_lab'
+    public $filter_tipe = '';
 
     public $hari_list = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
     public function updatedTipe($value)
     {
-        // Sesuaikan default warna berdasarkan tipe
         if (!$this->is_edit) {
             $this->warna = ($value === 'jaga_lab') ? '#198754' : '#435ebe';
         }
@@ -53,6 +53,8 @@ class ManajemenMatkul extends Component
 
     public function simpan()
     {
+        $userId = Auth::id();
+
         $this->validate([
             'tipe' => 'required|in:kuliah,jaga_lab',
             'nama_matkul' => 'required|min:2',
@@ -66,7 +68,7 @@ class ManajemenMatkul extends Component
         ]);
 
         if ($this->is_edit && $this->edit_id) {
-            $matkul = Matkul::findOrFail($this->edit_id);
+            $matkul = Matkul::where('user_id', $userId)->findOrFail($this->edit_id);
             $matkul->update([
                 'tipe' => $this->tipe,
                 'nama_matkul' => $this->nama_matkul,
@@ -84,6 +86,7 @@ class ManajemenMatkul extends Component
             session()->flash('sukses', "{$label} berhasil diperbarui!");
         } else {
             Matkul::create([
+                'user_id' => $userId,
                 'tipe' => $this->tipe,
                 'nama_matkul' => $this->nama_matkul,
                 'kode_matkul' => $this->kode_matkul,
@@ -105,7 +108,7 @@ class ManajemenMatkul extends Component
 
     public function edit($id)
     {
-        $matkul = Matkul::findOrFail($id);
+        $matkul = Matkul::where('user_id', Auth::id())->findOrFail($id);
         $this->edit_id = $matkul->id;
         $this->tipe = $matkul->tipe ?: 'kuliah';
         $this->nama_matkul = $matkul->nama_matkul;
@@ -123,7 +126,7 @@ class ManajemenMatkul extends Component
 
     public function hapus($id)
     {
-        $matkul = Matkul::findOrFail($id);
+        $matkul = Matkul::where('user_id', Auth::id())->findOrFail($id);
         $label = $matkul->tipe === 'jaga_lab' ? 'Jadwal Jaga Lab' : 'Mata kuliah';
         $matkul->delete();
         session()->flash('sukses', "{$label} berhasil dihapus!");
@@ -134,9 +137,12 @@ class ManajemenMatkul extends Component
 
     public function render()
     {
-        $query = Matkul::withCount(['tugas as tugas_aktif_count' => function ($q) {
-            $q->where('status', '!=', 'selesai');
-        }]);
+        $userId = Auth::id();
+
+        $query = Matkul::where('user_id', $userId)
+            ->withCount(['tugas as tugas_aktif_count' => function ($q) use ($userId) {
+                $q->where('user_id', $userId)->where('status', '!=', 'selesai');
+            }]);
 
         if ($this->filter_hari) {
             $query->where('hari', $this->filter_hari);
@@ -152,9 +158,9 @@ class ManajemenMatkul extends Component
 
         return view('livewire.manajemen-matkul', [
             'matkuls' => $matkuls,
-            'total_matkul' => Matkul::where('tipe', 'kuliah')->count(),
-            'total_lab' => Matkul::where('tipe', 'jaga_lab')->count(),
-            'total_sks' => Matkul::where('tipe', 'kuliah')->sum('sks'),
+            'total_matkul' => Matkul::where('user_id', $userId)->where('tipe', 'kuliah')->count(),
+            'total_lab' => Matkul::where('user_id', $userId)->where('tipe', 'jaga_lab')->count(),
+            'total_sks' => Matkul::where('user_id', $userId)->where('tipe', 'kuliah')->sum('sks'),
         ]);
     }
 }

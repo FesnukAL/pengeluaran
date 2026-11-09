@@ -6,7 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class Pemasukan extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'tanggal',
+        'dompet_id',
+        'nominal',
+        'keterangan',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function dompet()
     {
         return $this->belongsTo(Dompet::class);
