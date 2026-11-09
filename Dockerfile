@@ -1,4 +1,12 @@
-FROM php:8.3-cli
+FROM php:8.3-apache
+
+# 1. Arahkan Document Root ke folder public Laravel
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# 2. Fix masalah Apache MPM dan aktifkan mod_rewrite untuk routing Laravel
+RUN a2dismod mpm_event mpm_worker && a2enmod mpm_prefork rewrite
 
 # Install system dependencies & PHP extensions
 RUN apt-get update && apt-get install -y \
