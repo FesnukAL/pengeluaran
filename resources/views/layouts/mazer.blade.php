@@ -339,6 +339,12 @@
                                 <span>Tugas & Daily Task</span>
                             </a>
                         </li>
+                        <li class="sidebar-item {{ request()->routeIs('pengaturan.telegram') ? 'active' : '' }}">
+                            <a href="{{ route('pengaturan.telegram') }}" class='sidebar-link'>
+                                <i class="bi bi-telegram text-primary"></i>
+                                <span>Pengaturan Telegram</span>
+                            </a>
+                        </li>
 
                         @if(auth()->check() && auth()->user()->isAdmin())
                         <li class="sidebar-title text-danger fw-bold">Super Admin</li>

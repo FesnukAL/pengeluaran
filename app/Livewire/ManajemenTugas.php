@@ -180,21 +180,33 @@ class ManajemenTugas extends Component
 
     public function kirimPengingatManual()
     {
-        $kirim = TelegramService::kirimPengingatHarian(true);
+        $user = Auth::user();
+        if (!$user->pengaturan || empty($user->pengaturan->telegram_chat_id)) {
+            session()->flash('error', 'Chat ID Telegram belum diatur! Buka menu Pengaturan Telegram untuk menghubungkan akun.');
+            return;
+        }
+
+        $kirim = TelegramService::kirimPengingatHarianUser($user, true);
         if ($kirim) {
             session()->flash('sukses', 'Notifikasi jadwal & pengingat berhasil dikirim ke Telegram kamu!');
         } else {
-            session()->flash('error', 'Gagal mengirim notifikasi ke Telegram.');
+            session()->flash('error', 'Gagal mengirim notifikasi ke Telegram. Pastikan Chat ID valid.');
         }
     }
 
     public function kirimLaporanHarian()
     {
-        $kirim = TelegramService::kirimLaporanHarianTelegram();
+        $user = Auth::user();
+        if (!$user->pengaturan || empty($user->pengaturan->telegram_chat_id)) {
+            session()->flash('error', 'Chat ID Telegram belum diatur! Buka menu Pengaturan Telegram untuk menghubungkan akun.');
+            return;
+        }
+
+        $kirim = TelegramService::kirimLaporanHarianUser($user, true);
         if ($kirim) {
             session()->flash('sukses', '📊 Laporan kegiatan harian berhasil dikirim ke bot Telegram kamu!');
         } else {
-            session()->flash('error', 'Gagal mengirim laporan harian ke Telegram.');
+            session()->flash('error', 'Gagal mengirim laporan harian ke Telegram. Pastikan Chat ID valid.');
         }
     }
 

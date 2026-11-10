@@ -19,14 +19,15 @@ Route::get('/api/telegram-cron', function (Request $request) {
     }
     $tipe = $request->query('tipe', 'pengingat'); // 'pengingat' atau 'laporan'
     if ($tipe === 'laporan') {
-        $sent = \App\Services\TelegramService::kirimLaporanHarianTelegram();
+        $count = \App\Services\TelegramService::kirimLaporanSemuaUser(false);
     } else {
-        $sent = \App\Services\TelegramService::kirimPengingatHarian(true);
+        $count = \App\Services\TelegramService::kirimPengingatSemuaUser(false);
     }
     return response()->json([
-        'status' => $sent ? 'success' : 'failed',
+        'status' => 'success',
         'tipe' => $tipe,
-        'message' => $sent ? 'Pesan Telegram berhasil diproses!' : 'Gagal mengirim pesan ke Telegram.'
+        'terkirim_ke_user' => $count,
+        'message' => "Proses pengiriman {$tipe} selesai ke {$count} user aktif."
     ]);
 });
 
@@ -81,6 +82,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/kuliah/tugas', function () {
         return view('kuliah.tugas');
     })->name('kuliah.tugas');
+
+    // Pengaturan Notifikasi & Bot Telegram
+    Route::get('/pengaturan/telegram', function () {
+        return view('pengaturan.telegram');
+    })->name('pengaturan.telegram');
 
     // Legacy Redirects
     Route::get('/daily-input', function () {
