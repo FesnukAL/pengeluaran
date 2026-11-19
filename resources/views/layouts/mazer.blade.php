@@ -266,6 +266,40 @@
             color: #ffffff !important;
         }
 
+        /* Sidebar toggle transition & full width desktop support */
+        #main {
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #sidebar {
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @media screen and (min-width: 1200px) {
+            body.sidebar-collapsed #sidebar {
+                left: -300px !important;
+            }
+            body.sidebar-collapsed #main {
+                margin-left: 0 !important;
+            }
+        }
+        .burger-btn {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            color: #607080;
+            background: transparent;
+            border: none;
+            padding: 4px;
+        }
+        html[data-bs-theme="dark"] .burger-btn {
+            color: #cbd5e1 !important;
+        }
+        .burger-btn:hover {
+            color: #435ebe !important;
+            transform: scale(1.05);
+        }
+
         /* Table styling in Dark Mode */
         html[data-bs-theme="dark"] .table {
             --bs-table-color: #c2c2d9;
@@ -438,7 +472,17 @@
             </div>
         </div>
         <div id="main">
-            <header class="mb-3 d-flex justify-content-end align-items-center">
+            <header class="mb-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <!-- Tombol Garis Tiga / Hamburger (Buka/Tutup Sidebar) -->
+                    <a href="#" class="burger-btn me-2 p-1 text-decoration-none" id="btn-toggle-sidebar" title="Buka / Tutup Sidebar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </a>
+                </div>
                 @auth
                 <div class="d-flex align-items-center gap-2 ms-auto">
                     @if(auth()->user()->isAdmin())
@@ -479,6 +523,45 @@
 
     <script src="{{ secure_asset('assets/extensions/perfect-scrollbar/perfect-scrollbar.min.js') }}"></script>
     <script src="{{ secure_asset('assets/compiled/js/app.js') }}"></script>
+    <script>
+        window.toggleSidebarManual = function() {
+            if (window.innerWidth >= 1200) {
+                document.body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('sidebar_collapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+            } else {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                    if (sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                        sidebar.classList.add('inactive');
+                        const backdrop = document.querySelector('.sidebar-backdrop');
+                        if (backdrop) backdrop.remove();
+                    } else {
+                        sidebar.classList.add('active');
+                        sidebar.classList.remove('inactive');
+                        const bd = document.createElement('div');
+                        bd.classList.add('sidebar-backdrop');
+                        bd.addEventListener('click', window.toggleSidebarManual);
+                        document.body.appendChild(bd);
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.innerWidth >= 1200 && localStorage.getItem('sidebar_collapsed') === '1') {
+                document.body.classList.add('sidebar-collapsed');
+            }
+
+            const toggleBtn = document.getElementById('btn-toggle-sidebar');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.toggleSidebarManual();
+                });
+            }
+        });
+    </script>
     @livewireScripts
 </body>
 
