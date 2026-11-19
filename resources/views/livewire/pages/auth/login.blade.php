@@ -39,12 +39,12 @@ new #[Layout('layouts.guest')] class extends Component
         @endif
 
         <form wire:submit="login">
-            <!-- Email Address -->
+            <!-- Email or Username -->
             <div class="mb-3">
-                <label for="email" class="form-label small fw-semibold text-secondary">Alamat Email</label>
+                <label for="email" class="form-label small fw-semibold text-secondary">Email atau Username</label>
                 <div class="input-group-modern">
                     <i class="bi bi-person input-icon"></i>
-                    <input wire:model="form.email" id="email" type="email" class="form-control @error('form.email') is-invalid @enderror" placeholder="nama@email.com" required autofocus autocomplete="username">
+                    <input wire:model="form.email" id="email" type="text" class="form-control @error('form.email') is-invalid @enderror" placeholder="nama@email.com atau username" required autofocus autocomplete="username">
                 </div>
                 @error('form.email')
                     <div class="text-danger small mt-n2 mb-2">{{ $message }}</div>
