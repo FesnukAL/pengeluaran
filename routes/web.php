@@ -88,6 +88,11 @@ Route::middleware('auth')->group(function () {
         return view('pengaturan.telegram');
     })->name('pengaturan.telegram');
 
+    // Biodata & Portofolio Pengembang
+    Route::get('/biodata', function () {
+        return view('biodata');
+    })->name('biodata');
+
     // Legacy Redirects
     Route::get('/daily-input', function () {
         return redirect()->route('kuliah.tugas');

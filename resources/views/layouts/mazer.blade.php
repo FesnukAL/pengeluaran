@@ -458,6 +458,12 @@
                         @endif
 
                         <li class="sidebar-title">Akun</li>
+                        <li class="sidebar-item {{ request()->routeIs('biodata') ? 'active' : '' }}">
+                            <a href="{{ route('biodata') }}" class='sidebar-link'>
+                                <i class="bi bi-person-vcard text-info"></i>
+                                <span>Profil Pengembang</span>
+                            </a>
+                        </li>
                         <li class="sidebar-item">
                             <form method="POST" action="{{ route('logout') }}" id="sidebar-logout-form">
                                 @csrf
@@ -513,7 +519,7 @@
                     </div>
                     <div class="float-end">
                         <p>Dibuat dengan <span class="text-danger"><i class="bi bi-heart-fill icon-mid"></i></span>
-                            oleh <a href="#">Albar</a></p>
+                            oleh <a href="{{ route('biodata') }}" class="fw-bold text-primary text-decoration-underline" title="Lihat Profil & Biodata Pengembang">Albar</a></p>
                     </div>
                 </div>
             </footer>
