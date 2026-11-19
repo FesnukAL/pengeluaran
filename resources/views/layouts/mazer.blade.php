@@ -481,7 +481,8 @@
             <header class="mb-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
                     <!-- Tombol Garis Tiga / Hamburger (Buka/Tutup Sidebar) -->
-                    <a href="#" class="burger-btn me-2 p-1 text-decoration-none" id="btn-toggle-sidebar" title="Buka / Tutup Sidebar">
+                    <!-- Hapus class burger-btn agar tidak konflik dengan Mazer native handler -->
+                    <a href="#" class="me-2 p-1 text-decoration-none sidebar-toggle-custom" id="btn-toggle-sidebar" title="Buka / Tutup Sidebar" style="color:inherit;line-height:1;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="3" y1="6" x2="21" y2="6"></line>
                             <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -530,23 +531,36 @@
     <script src="{{ secure_asset('assets/extensions/perfect-scrollbar/perfect-scrollbar.min.js') }}"></script>
     <script src="{{ secure_asset('assets/compiled/js/app.js') }}"></script>
     <script>
+        // ============================================================
+        // SIDEBAR TOGGLE — bebas konflik dengan Mazer native burger-btn
+        // ============================================================
         window.toggleSidebarManual = function() {
             if (window.innerWidth >= 1200) {
+                // Desktop: toggle class sidebar-collapsed di body
                 document.body.classList.toggle('sidebar-collapsed');
                 localStorage.setItem('sidebar_collapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
             } else {
-                const sidebar = document.getElementById('sidebar');
-                if (sidebar) {
-                    if (sidebar.classList.contains('active')) {
-                        sidebar.classList.remove('active');
-                        sidebar.classList.add('inactive');
-                        const backdrop = document.querySelector('.sidebar-backdrop');
-                        if (backdrop) backdrop.remove();
-                    } else {
-                        sidebar.classList.add('active');
-                        sidebar.classList.remove('inactive');
+                // Mobile: toggle class active/inactive pada .sidebar-wrapper (Mazer style)
+                const sidebarWrapper = document.querySelector('#sidebar .sidebar-wrapper');
+                if (!sidebarWrapper) return;
+
+                const isActive = sidebarWrapper.classList.contains('active');
+
+                if (isActive) {
+                    // Tutup sidebar
+                    sidebarWrapper.classList.remove('active');
+                    sidebarWrapper.classList.add('inactive');
+                    const backdrop = document.querySelector('.sidebar-backdrop');
+                    if (backdrop) backdrop.remove();
+                } else {
+                    // Buka sidebar
+                    sidebarWrapper.classList.remove('inactive');
+                    sidebarWrapper.classList.add('active');
+                    // Buat backdrop untuk menutup saat klik di luar
+                    if (!document.querySelector('.sidebar-backdrop')) {
                         const bd = document.createElement('div');
                         bd.classList.add('sidebar-backdrop');
+                        bd.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:rgba(0,0,0,0.3);';
                         bd.addEventListener('click', window.toggleSidebarManual);
                         document.body.appendChild(bd);
                     }
@@ -555,14 +569,17 @@
         };
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Restore state desktop
             if (window.innerWidth >= 1200 && localStorage.getItem('sidebar_collapsed') === '1') {
                 document.body.classList.add('sidebar-collapsed');
             }
 
+            // Pasang event listener pada tombol hamburger kustom kita
             const toggleBtn = document.getElementById('btn-toggle-sidebar');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
                     window.toggleSidebarManual();
                 });
             }
