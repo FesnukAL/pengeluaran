@@ -17,6 +17,13 @@
     <link rel="stylesheet" href="{{ secure_asset('assets/compiled/css/app.css') }}">
     <link rel="stylesheet" href="{{ secure_asset('assets/compiled/css/app-dark.css') }}">
     <script src="{{ secure_asset('assets/static/js/initTheme.js') }}"></script>
+    {{-- Terapkan tema dari localStorage sebelum render (cegah flash) --}}
+    <script>
+        (function() {
+            var t = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
     @livewireStyles
     <style>
         body {
@@ -162,10 +169,44 @@
 </head>
 
 <body>
+    {{-- Tombol Toggle Dark/Light Mode --}}
+    <button id="btn-theme-toggle" onclick="toggleTheme()" title="Ganti Mode Gelap/Terang"
+        style="position:fixed;top:1rem;right:1rem;z-index:9999;border:none;border-radius:50rem;
+               width:42px;height:42px;cursor:pointer;font-size:1.2rem;
+               background:rgba(255,255,255,0.85);box-shadow:0 2px 10px rgba(0,0,0,0.15);
+               backdrop-filter:blur(6px);transition:all 0.2s;">
+        🌙
+    </button>
+
     <div class="auth-card">
         {{ $slot }}
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Inisialisasi tema dari localStorage
+        (function() {
+            var saved = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', saved);
+            var btn = document.getElementById('btn-theme-toggle');
+            if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+        })();
+
+        function toggleTheme() {
+            var current = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            var next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('theme', next);
+            var btn = document.getElementById('btn-theme-toggle');
+            if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
+            // Sinkron style body background
+            if (next === 'dark') {
+                btn.style.background = 'rgba(30,30,45,0.85)';
+            } else {
+                btn.style.background = 'rgba(255,255,255,0.85)';
+            }
+        }
+    </script>
     @livewireScripts
 </body>
 
