@@ -470,9 +470,7 @@
                     <a href="#" class="burger-btn btn btn-outline-secondary btn-sm rounded-3 px-2 py-1 shadow-sm" id="btn-toggle-sidebar" title="Buka / Tutup Menu Sidebar">
                         <i class="bi bi-list fs-3"></i>
                     </a>
-                    <span class="d-none d-sm-inline-block text-muted small fw-semibold ms-1">
-                        Catatan Keuangan & Tugas
-                    </span>
+        
                 </div>
                 @auth
                 <div class="d-flex align-items-center gap-2 ms-auto">
