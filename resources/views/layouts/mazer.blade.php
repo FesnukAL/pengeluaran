@@ -529,52 +529,44 @@
     <script src="{{ secure_asset('assets/static/js/components/dark.js') }}"></script>
 
     <script src="{{ secure_asset('assets/extensions/perfect-scrollbar/perfect-scrollbar.min.js') }}"></script>
+
+    {{-- Script SEBELUM app.js: intercept window.Sidebar agar instance tersimpan --}}
+    <script>
+        // Patch window.Sidebar SEBELUM app.js memanggil new window.Sidebar(Xe)
+        // app.js: window.Sidebar = Mr; Xe && new window.Sidebar(Xe);
+        // Dengan Object.defineProperty kita wrap setter agar tangkap instance-nya.
+        (function() {
+            let _SidebarClass = null;
+            Object.defineProperty(window, 'Sidebar', {
+                configurable: true,
+                get: function() { return _SidebarClass; },
+                set: function(cls) {
+                    _SidebarClass = function(el, opts) {
+                        // Pastikan dipanggil sebagai constructor
+                        if (!(this instanceof _SidebarClass)) {
+                            return new _SidebarClass(el, opts);
+                        }
+                        // Panggil constructor asli
+                        cls.call(this, el, opts);
+                        // Simpan instance
+                        window._mazerSidebar = this;
+                    };
+                    _SidebarClass.prototype = cls.prototype;
+                    _SidebarClass.prototype.constructor = _SidebarClass;
+                }
+            });
+        })();
+    </script>
+
     <script src="{{ secure_asset('assets/compiled/js/app.js') }}"></script>
     <script>
-        // ============================================================
-        // SIDEBAR TOGGLE — bebas konflik dengan Mazer native burger-btn
-        // ============================================================
-        window.toggleSidebarManual = function() {
-            if (window.innerWidth >= 1200) {
-                // Desktop: toggle class sidebar-collapsed di body
-                document.body.classList.toggle('sidebar-collapsed');
-                localStorage.setItem('sidebar_collapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
-            } else {
-                // Mobile: toggle class active/inactive pada .sidebar-wrapper (Mazer style)
-                const sidebarWrapper = document.querySelector('#sidebar .sidebar-wrapper');
-                if (!sidebarWrapper) return;
-
-                const isActive = sidebarWrapper.classList.contains('active');
-
-                if (isActive) {
-                    // Tutup sidebar
-                    sidebarWrapper.classList.remove('active');
-                    sidebarWrapper.classList.add('inactive');
-                    const backdrop = document.querySelector('.sidebar-backdrop');
-                    if (backdrop) backdrop.remove();
-                } else {
-                    // Buka sidebar
-                    sidebarWrapper.classList.remove('inactive');
-                    sidebarWrapper.classList.add('active');
-                    // Buat backdrop untuk menutup saat klik di luar
-                    if (!document.querySelector('.sidebar-backdrop')) {
-                        const bd = document.createElement('div');
-                        bd.classList.add('sidebar-backdrop');
-                        bd.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:900;background:rgba(0,0,0,0.3);';
-                        bd.addEventListener('click', window.toggleSidebarManual);
-                        document.body.appendChild(bd);
-                    }
-                }
-            }
-        };
-
         document.addEventListener('DOMContentLoaded', function() {
             // Restore state desktop
             if (window.innerWidth >= 1200 && localStorage.getItem('sidebar_collapsed') === '1') {
                 document.body.classList.add('sidebar-collapsed');
             }
 
-            // Pasang event listener pada tombol hamburger kustom kita
+            // Pasang event listener pada tombol hamburger kustom
             const toggleBtn = document.getElementById('btn-toggle-sidebar');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function(e) {
@@ -584,6 +576,40 @@
                 });
             }
         });
+
+        window.toggleSidebarManual = function() {
+            if (window.innerWidth >= 1200) {
+                // Desktop: toggle class sidebar-collapsed di body
+                document.body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('sidebar_collapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+            } else {
+                // Mobile: gunakan Mazer Sidebar instance jika ada
+                if (window._mazerSidebar) {
+                    window._mazerSidebar.toggle();
+                    return;
+                }
+                // Fallback manual jika instance belum tersimpan
+                const sidebarEl = document.getElementById('sidebar');
+                if (!sidebarEl) return;
+                if (sidebarEl.classList.contains('active')) {
+                    sidebarEl.classList.remove('active');
+                    sidebarEl.classList.add('inactive');
+                    const backdrop = document.querySelector('.sidebar-backdrop');
+                    if (backdrop) backdrop.remove();
+                    document.body.style.overflowY = 'auto';
+                } else {
+                    sidebarEl.classList.remove('inactive');
+                    sidebarEl.classList.add('active');
+                    if (!document.querySelector('.sidebar-backdrop')) {
+                        const bd = document.createElement('div');
+                        bd.classList.add('sidebar-backdrop');
+                        bd.addEventListener('click', window.toggleSidebarManual);
+                        document.body.appendChild(bd);
+                    }
+                    document.body.style.overflowY = 'hidden';
+                }
+            }
+        };
     </script>
     @livewireScripts
 </body>
