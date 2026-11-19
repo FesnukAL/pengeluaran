@@ -199,6 +199,99 @@
             filter: invert(0.85);
         }
 
+        /* Dark Mode Fixes for bg-light, buttons, cards, and inputs */
+        html[data-bs-theme="dark"] .bg-light,
+        html[data-bs-theme="dark"] div.bg-light {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #e2e8f0 !important;
+        }
+        html[data-bs-theme="dark"] .telegram-toggle-box {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        }
+        html[data-bs-theme="dark"] .telegram-toggle-box .form-check-label {
+            color: #ffffff !important;
+        }
+        html[data-bs-theme="dark"] .telegram-toggle-box small {
+            color: #cbd5e1 !important;
+        }
+        html[data-bs-theme="dark"] .input-group-text {
+            background-color: #252538 !important;
+            border-color: #35354f !important;
+            color: #adb5bd !important;
+        }
+        html[data-bs-theme="dark"] .border {
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        html[data-bs-theme="dark"] .btn-light-primary {
+            background-color: rgba(67, 94, 190, 0.22) !important;
+            border: 1px solid rgba(67, 94, 190, 0.45) !important;
+            color: #8da2fb !important;
+        }
+        html[data-bs-theme="dark"] .btn-light-primary:hover {
+            background-color: rgba(67, 94, 190, 0.38) !important;
+            color: #ffffff !important;
+        }
+        html[data-bs-theme="dark"] .btn-light-info {
+            background-color: rgba(13, 202, 240, 0.2) !important;
+            border: 1px solid rgba(13, 202, 240, 0.45) !important;
+            color: #48dbfb !important;
+        }
+        html[data-bs-theme="dark"] .btn-light-info:hover {
+            background-color: rgba(13, 202, 240, 0.38) !important;
+            color: #ffffff !important;
+        }
+        html[data-bs-theme="dark"] .alert-light-primary {
+            background-color: rgba(67, 94, 190, 0.18) !important;
+            border-color: rgba(67, 94, 190, 0.35) !important;
+            color: #93c5fd !important;
+        }
+        html[data-bs-theme="dark"] code {
+            background-color: rgba(255, 255, 255, 0.12) !important;
+            color: #38bdf8 !important;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        html[data-bs-theme="dark"] .dropdown-menu {
+            background-color: #1e1e2d !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #e2e8f0 !important;
+        }
+        html[data-bs-theme="dark"] .dropdown-item {
+            color: #c2c2d9 !important;
+        }
+        html[data-bs-theme="dark"] .dropdown-item:hover {
+            background-color: rgba(67, 94, 190, 0.28) !important;
+            color: #ffffff !important;
+        }
+
+        /* Sidebar toggle transition & full width desktop support */
+        #main {
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #sidebar {
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @media screen and (min-width: 1200px) {
+            body.sidebar-collapsed #sidebar {
+                left: -300px !important;
+            }
+            body.sidebar-collapsed #main {
+                margin-left: 0 !important;
+            }
+        }
+        .burger-btn {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .burger-btn:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
         /* Table styling in Dark Mode */
         html[data-bs-theme="dark"] .table {
             --bs-table-color: #c2c2d9;
@@ -372,9 +465,15 @@
         </div>
         <div id="main">
             <header class="mb-3 d-flex justify-content-between align-items-center">
-                <a href="#" class="burger-btn d-block d-xl-none">
-                    <i class="bi bi-justify fs-3"></i>
-                </a>
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Tombol Buka / Tutup Sidebar (Titik Tiga / Menu Icon) -->
+                    <a href="#" class="burger-btn btn btn-outline-secondary btn-sm rounded-3 px-2 py-1 shadow-sm" id="btn-toggle-sidebar" title="Buka / Tutup Menu Sidebar">
+                        <i class="bi bi-list fs-3"></i>
+                    </a>
+                    <span class="d-none d-sm-inline-block text-muted small fw-semibold ms-1">
+                        Catatan Keuangan & Tugas
+                    </span>
+                </div>
                 @auth
                 <div class="d-flex align-items-center gap-2 ms-auto">
                     @if(auth()->user()->isAdmin())
@@ -385,9 +484,45 @@
                     <span class="badge bg-light-primary text-primary fw-semibold px-3 py-2 rounded-pill">
                         <i class="bi bi-person-circle me-1"></i> {{ auth()->user()->name }}
                     </span>
-                    <form method="POST" action="{{ route('logout') }}" class="d-inline">
+
+                    <!-- Menu Titik Tiga (⋮) di Header untuk Buka/Tutup & Aksi Cepat -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm rounded-circle p-2 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Menu Opsi (Titik Tiga)">
+                            <i class="bi bi-three-dots-vertical fs-6"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center py-2" href="#" onclick="event.preventDefault(); window.toggleSidebarManual();">
+                                    <i class="bi bi-layout-sidebar-inset me-2 text-primary"></i> Buka / Tutup Sidebar
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center py-2" href="{{ route('pengaturan.telegram') }}">
+                                    <i class="bi bi-telegram me-2 text-info"></i> Pengaturan Telegram
+                                </a>
+                            </li>
+                            @if(auth()->user()->isAdmin())
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center py-2" href="{{ route('admin.users') }}">
+                                    <i class="bi bi-shield-check me-2 text-danger"></i> Tracking User (Admin)
+                                </a>
+                            </li>
+                            @endif
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item d-flex align-items-center text-danger py-2">
+                                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <form method="POST" action="{{ route('logout') }}" class="d-none d-md-inline">
                         @csrf
-                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Keluar">
+                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-sm" title="Keluar">
                             <i class="bi bi-box-arrow-right"></i> Logout
                         </button>
                     </form>
@@ -415,6 +550,45 @@
 
     <script src="{{ secure_asset('assets/extensions/perfect-scrollbar/perfect-scrollbar.min.js') }}"></script>
     <script src="{{ secure_asset('assets/compiled/js/app.js') }}"></script>
+    <script>
+        window.toggleSidebarManual = function() {
+            if (window.innerWidth >= 1200) {
+                document.body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('sidebar_collapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+            } else {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                    if (sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                        sidebar.classList.add('inactive');
+                        const backdrop = document.querySelector('.sidebar-backdrop');
+                        if (backdrop) backdrop.remove();
+                    } else {
+                        sidebar.classList.add('active');
+                        sidebar.classList.remove('inactive');
+                        const bd = document.createElement('div');
+                        bd.classList.add('sidebar-backdrop');
+                        bd.addEventListener('click', window.toggleSidebarManual);
+                        document.body.appendChild(bd);
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.innerWidth >= 1200 && localStorage.getItem('sidebar_collapsed') === '1') {
+                document.body.classList.add('sidebar-collapsed');
+            }
+
+            const toggleBtn = document.getElementById('btn-toggle-sidebar');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.toggleSidebarManual();
+                });
+            }
+        });
+    </script>
     @livewireScripts
 </body>
 
