@@ -529,87 +529,80 @@
     <script src="{{ secure_asset('assets/static/js/components/dark.js') }}"></script>
 
     <script src="{{ secure_asset('assets/extensions/perfect-scrollbar/perfect-scrollbar.min.js') }}"></script>
-
-    {{-- Script SEBELUM app.js: intercept window.Sidebar agar instance tersimpan --}}
-    <script>
-        // Patch window.Sidebar SEBELUM app.js memanggil new window.Sidebar(Xe)
-        // app.js: window.Sidebar = Mr; Xe && new window.Sidebar(Xe);
-        // Dengan Object.defineProperty kita wrap setter agar tangkap instance-nya.
-        (function() {
-            let _SidebarClass = null;
-            Object.defineProperty(window, 'Sidebar', {
-                configurable: true,
-                get: function() { return _SidebarClass; },
-                set: function(cls) {
-                    _SidebarClass = function(el, opts) {
-                        // Pastikan dipanggil sebagai constructor
-                        if (!(this instanceof _SidebarClass)) {
-                            return new _SidebarClass(el, opts);
-                        }
-                        // Panggil constructor asli
-                        cls.call(this, el, opts);
-                        // Simpan instance
-                        window._mazerSidebar = this;
-                    };
-                    _SidebarClass.prototype = cls.prototype;
-                    _SidebarClass.prototype.constructor = _SidebarClass;
-                }
-            });
-        })();
-    </script>
-
     <script src="{{ secure_asset('assets/compiled/js/app.js') }}"></script>
     <script>
+        // ============================================================
+        // SIDEBAR TOGGLE — custom handler untuk hamburger & tombol X
+        // Langsung manipulasi #sidebar class (sama persis seperti Mazer)
+        // ============================================================
+
+        function sidebarShow() {
+            var el = document.getElementById('sidebar');
+            if (!el) return;
+            el.classList.add('active');
+            el.classList.remove('inactive');
+            // backdrop
+            if (!document.querySelector('.sidebar-backdrop')) {
+                var bd = document.createElement('div');
+                bd.className = 'sidebar-backdrop';
+                bd.onclick = sidebarHide;
+                document.body.appendChild(bd);
+            }
+            document.body.style.overflowY = 'hidden';
+        }
+
+        function sidebarHide() {
+            var el = document.getElementById('sidebar');
+            if (!el) return;
+            el.classList.remove('active');
+            el.classList.add('inactive');
+            var bd = document.querySelector('.sidebar-backdrop');
+            if (bd) bd.remove();
+            document.body.style.overflowY = '';
+        }
+
+        window.toggleSidebarManual = function() {
+            if (window.innerWidth >= 1200) {
+                // Desktop: toggle sidebar-collapsed di body
+                document.body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('sidebar_collapsed',
+                    document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+            } else {
+                // Mobile: toggle #sidebar.active / #sidebar.inactive
+                var el = document.getElementById('sidebar');
+                if (el && el.classList.contains('active')) {
+                    sidebarHide();
+                } else {
+                    sidebarShow();
+                }
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
             // Restore state desktop
             if (window.innerWidth >= 1200 && localStorage.getItem('sidebar_collapsed') === '1') {
                 document.body.classList.add('sidebar-collapsed');
             }
 
-            // Pasang event listener pada tombol hamburger kustom
-            const toggleBtn = document.getElementById('btn-toggle-sidebar');
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', function(e) {
+            // Tombol hamburger (buka sidebar)
+            var hamburger = document.getElementById('btn-toggle-sidebar');
+            if (hamburger) {
+                hamburger.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     window.toggleSidebarManual();
                 });
             }
-        });
 
-        window.toggleSidebarManual = function() {
-            if (window.innerWidth >= 1200) {
-                // Desktop: toggle class sidebar-collapsed di body
-                document.body.classList.toggle('sidebar-collapsed');
-                localStorage.setItem('sidebar_collapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
-            } else {
-                // Mobile: gunakan Mazer Sidebar instance jika ada
-                if (window._mazerSidebar) {
-                    window._mazerSidebar.toggle();
-                    return;
-                }
-                // Fallback manual jika instance belum tersimpan
-                const sidebarEl = document.getElementById('sidebar');
-                if (!sidebarEl) return;
-                if (sidebarEl.classList.contains('active')) {
-                    sidebarEl.classList.remove('active');
-                    sidebarEl.classList.add('inactive');
-                    const backdrop = document.querySelector('.sidebar-backdrop');
-                    if (backdrop) backdrop.remove();
-                    document.body.style.overflowY = 'auto';
-                } else {
-                    sidebarEl.classList.remove('inactive');
-                    sidebarEl.classList.add('active');
-                    if (!document.querySelector('.sidebar-backdrop')) {
-                        const bd = document.createElement('div');
-                        bd.classList.add('sidebar-backdrop');
-                        bd.addEventListener('click', window.toggleSidebarManual);
-                        document.body.appendChild(bd);
-                    }
-                    document.body.style.overflowY = 'hidden';
-                }
-            }
-        };
+            // Tombol X (tutup sidebar) — override Mazer listener juga
+            document.querySelectorAll('.sidebar-hide').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sidebarHide();
+                });
+            });
+        });
     </script>
     @livewireScripts
 </body>
