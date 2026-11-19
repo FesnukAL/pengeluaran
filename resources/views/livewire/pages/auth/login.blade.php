@@ -38,6 +38,22 @@ new #[Layout('layouts.guest')] class extends Component
             </div>
         @endif
 
+        {{-- Info Akun Pengujian --}}
+        <div class="alert mb-4 small rounded-3" style="background:#fffbe6;border:1.5px solid #ffe066;color:#7a6300;">
+            <div class="fw-bold mb-1" style="color:#7a6300;">
+                <i class="bi bi-info-circle-fill me-1" style="color:#f5c518;"></i>
+                Akun untuk Pengujian (Demo)
+            </div>
+            <div class="mb-1">
+                <span class="badge me-1" style="background:#fff3cd;color:#7a6300;border:1px solid #ffe066;">👤 Admin / Dosen</span>
+                <code style="color:#b45309;">admin</code> &nbsp;|&nbsp; <code style="color:#b45309;">admin123</code>
+            </div>
+            <div>
+                <span class="badge me-1" style="background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;">👤 Mahasiswa</span>
+                Daftar akun sendiri via <strong>Daftar Akun Baru</strong>
+            </div>
+        </div>
+
         <form wire:submit="login">
             <!-- Email or Username -->
             <div class="mb-3">
